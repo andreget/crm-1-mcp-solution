@@ -4,5 +4,11 @@
       "type": "http",
       "url": "http://localhost:5080/mcp"
     }
+  },
+  "mcpServers": {
+    "crm": {
+      "type": "http",
+      "url": "http://localhost:5080/mcp"
+    }
   }
 }
