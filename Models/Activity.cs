@@ -11,4 +11,13 @@ public class Activity
     public DateTime Date { get; set; } = DateTime.Now;
     public string? Notes { get; set; }
     public bool Done { get; set; }
+
+    // Returns an empty string when the activity is valid.
+    // That the customer exists is checked where the services are available.
+    public string Validate()
+    {
+        if (string.IsNullOrWhiteSpace(Title)) return "Title is required.";
+        if (!Types.Contains(Type)) return "Type must be Meeting, Call, Email or Task.";
+        return "";
+    }
 }

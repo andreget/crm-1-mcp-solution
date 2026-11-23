@@ -12,5 +12,6 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Dapper" Version="2.*" />
+		<PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.*" />
 	</ItemGroup>
 </Project>

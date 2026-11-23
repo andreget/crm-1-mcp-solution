@@ -23,6 +23,9 @@ builder.Services.AddScoped<IActivityService, DapperActivityService>();
 //builder.Services.AddScoped<IActivityService, XmlActivityService>();
 //builder.Services.AddSingleton<IActivityService, InMemoryActivityService>();
 
+// MCP server: tools are found by the [McpServerToolType] attribute
+builder.Services.AddMcpServer().WithHttpTransport().WithToolsFromAssembly();
+
 var app = builder.Build();
 
 // Seed the database from customers.json the first time
@@ -85,7 +88,7 @@ app.MapPost("/customers/new", async (HttpRequest request, ICustomerService custo
 {
     var customer = ReadCustomer(await request.ReadFormAsync());
 
-    string error = Validate(customer);
+    string error = customer.Validate();
     if (error != "")
         return Results.Content(FormPage(customer, "New customer", "/customers/new", error), "text/html");
 
@@ -141,7 +144,7 @@ app.MapPost("/customers/{id:int}/edit", async (int id, HttpRequest request, ICus
     var customer = ReadCustomer(await request.ReadFormAsync());
     customer.Id = id;
 
-    string error = Validate(customer);
+    string error = customer.Validate();
     if (error != "")
         return Results.Content(FormPage(customer, "Edit customer", $"/customers/{id}/edit", error), "text/html");
 
@@ -263,7 +266,7 @@ app.MapGet("/api/customers/{id:int}", (int id, ICustomerService customerService)
 
 app.MapPost("/api/customers", (Customer customer, ICustomerService customerService) =>
 {
-    string error = ValidateApiCustomer(customer);
+    string error = customer.Validate();
     if (error != "")
         return Results.BadRequest(new { error });
 
@@ -273,7 +276,7 @@ app.MapPost("/api/customers", (Customer customer, ICustomerService customerServi
 
 app.MapPut("/api/customers/{id:int}", (int id, Customer customer, ICustomerService customerService) =>
 {
-    string error = ValidateApiCustomer(customer);
+    string error = customer.Validate();
     if (error != "")
         return Results.BadRequest(new { error });
 
@@ -307,11 +310,9 @@ app.MapPost("/api/customers/{id:int}/activities", (int id, Activity activity, IC
     if (customerService.GetById(id) == null)
         return Results.NotFound();
 
-    if (string.IsNullOrWhiteSpace(activity.Title))
-        return Results.BadRequest(new { error = "Title is required." });
-
-    if (!Activity.Types.Contains(activity.Type))
-        return Results.BadRequest(new { error = "Type must be Meeting, Call, Email or Task." });
+    string error = activity.Validate();
+    if (error != "")
+        return Results.BadRequest(new { error });
 
     activity.CustomerId = id;
     activity.Done = false;
@@ -335,6 +336,8 @@ app.MapDelete("/api/activities/{id:int}", (int id, IActivityService activityServ
 {
     return activityService.Delete(id) ? Results.NoContent() : Results.NotFound();
 });
+
+app.MapMcp("/mcp");
 
 app.Run();
 
@@ -401,22 +404,6 @@ static Customer ReadCustomer(IFormCollection form)
         Notes = form["notes"].ToString().Trim(),
         Status = Customer.Statuses.Contains(status) ? status : "Lead"
     };
-}
-
-static string Validate(Customer c)
-{
-    if (c.Name == "") return "Name is required.";
-    if (!c.Email.Contains('@')) return "A valid email is required.";
-    return "";
-}
-
-// Same rules as the HTML forms, plus a valid status
-static string ValidateApiCustomer(Customer c)
-{
-    if (string.IsNullOrWhiteSpace(c.Name)) return "Name is required.";
-    if (string.IsNullOrEmpty(c.Email) || !c.Email.Contains('@')) return "A valid email is required.";
-    if (!Customer.Statuses.Contains(c.Status)) return "Status must be Lead, Active or Inactive.";
-    return "";
 }
 
 // One table row; the customer column is only shown when a customer is passed in
